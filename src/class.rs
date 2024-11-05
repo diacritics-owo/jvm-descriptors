@@ -12,10 +12,8 @@ pub struct Class {
 
 impl Display for Class {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let path = self.path.join("/");
-    path.fmt(f)?;
-
-    for subclass in self.subclasses.clone() {
+    self.path.join("/").fmt(f)?;
+    for subclass in &self.subclasses {
       f.write_char('$')?;
       subclass.fmt(f)?;
     }
@@ -32,9 +30,9 @@ impl FromStr for Class {
   }
 }
 
-impl<'a> Class {
+impl Class {
   pub fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
-    text::ident::<char, Simple<char>>()
+    text::ident()
       .separated_by(just('/'))
       .then(just('$').ignore_then(text::ident()).repeated())
       .map(|(path, subclasses)| Class { path, subclasses })

@@ -56,7 +56,7 @@ impl FromStr for Type {
   }
 }
 
-impl<'a> Type {
+impl Type {
   pub fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
     recursive(|ty| {
       choice((
