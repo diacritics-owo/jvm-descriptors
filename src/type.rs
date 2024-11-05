@@ -1,5 +1,9 @@
 use crate::class::Class;
-use std::fmt::{Display, Write};
+use chumsky::prelude::*;
+use std::{
+  fmt::{Display, Write},
+  str::FromStr,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -44,6 +48,37 @@ impl Display for Type {
   }
 }
 
+impl FromStr for Type {
+  type Err = Vec<Simple<char>>;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::parser().parse(s)
+  }
+}
+
+impl<'a> Type {
+  pub fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
+    recursive(|ty| {
+      choice((
+        just('B').to(Type::Byte),
+        just('C').to(Type::Char),
+        just('D').to(Type::Double),
+        just('F').to(Type::Float),
+        just('I').to(Type::Int),
+        just('J').to(Type::Long),
+        just('S').to(Type::Short),
+        just('Z').to(Type::Boolean),
+        Class::parser()
+          .delimited_by(just('L'), just(';'))
+          .map(|class| Type::Class(class)),
+        just('[')
+          .ignore_then(ty)
+          .map(|ty| Type::Array(Box::new(ty))),
+      ))
+    })
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -67,16 +102,25 @@ mod tests {
       "Ljava/lang/Object;"
     );
     assert_eq!(Type::Array(Box::new(Type::Int)).to_string(), "[I");
+  }
+
+  #[test]
+  fn parse() {
+    assert_eq!("B".parse(), Ok(Type::Byte));
+    assert_eq!("C".parse(), Ok(Type::Char));
+    assert_eq!("D".parse(), Ok(Type::Double));
+    assert_eq!("F".parse(), Ok(Type::Float));
+    assert_eq!("I".parse(), Ok(Type::Int));
+    assert_eq!("J".parse(), Ok(Type::Long));
+    assert_eq!("S".parse(), Ok(Type::Short));
+    assert_eq!("Z".parse(), Ok(Type::Boolean));
     assert_eq!(
-      Type::Array(Box::new(Type::Array(Box::new(Type::Int)))).to_string(),
-      "[[I"
+      "Ljava/lang/Object;".parse(),
+      Ok(Type::Class(Class {
+        path: vec!["java".to_string(), "lang".to_string(), "Object".to_string()],
+        subclasses: vec![],
+      }))
     );
-    assert_eq!(
-      Type::Array(Box::new(Type::Array(Box::new(Type::Array(Box::new(
-        Type::Int
-      ))))))
-      .to_string(),
-      "[[[I"
-    );
+    assert_eq!("[I".parse(), Ok(Type::Array(Box::new(Type::Int))));
   }
 }

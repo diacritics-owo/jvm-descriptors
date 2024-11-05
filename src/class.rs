@@ -1,4 +1,8 @@
-use std::fmt::{Display, Write};
+use chumsky::prelude::*;
+use std::{
+  fmt::{Display, Write},
+  str::FromStr,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Class {
@@ -17,6 +21,23 @@ impl Display for Class {
     }
 
     Ok(())
+  }
+}
+
+impl FromStr for Class {
+  type Err = Vec<Simple<char>>;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    Self::parser().parse(s)
+  }
+}
+
+impl<'a> Class {
+  pub fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
+    text::ident::<char, Simple<char>>()
+      .separated_by(just('/'))
+      .then(just('$').ignore_then(text::ident()).repeated())
+      .map(|(path, subclasses)| Class { path, subclasses })
   }
 }
 
@@ -42,6 +63,25 @@ mod tests {
       }
       .to_string(),
       "com/example/Foo$Bar$Baz"
+    );
+  }
+
+  #[test]
+  fn parse() {
+    assert_eq!(
+      "java/lang/Object".parse(),
+      Ok(Class {
+        path: vec!["java".to_string(), "lang".to_string(), "Object".to_string()],
+        subclasses: vec![],
+      })
+    );
+
+    assert_eq!(
+      "com/example/Foo$Bar$Baz".parse(),
+      Ok(Class {
+        path: vec!["com".to_string(), "example".to_string(), "Foo".to_string()],
+        subclasses: vec!["Bar".to_string(), "Baz".to_string()],
+      })
     );
   }
 }
