@@ -15,6 +15,3 @@ Method {
 ## Notes
 
 Note that this crate is somewhat lenient—the goal is to do basic parsing and no other validation. If you want to make sure that e.g. a given package path has at least two parts, validate it on your own. Additionally, absolutely no validation is done when serialising to a string.
-
-Things yet to be done:
-- [ ] Constructors (`<init>`, `<clinit>`)
